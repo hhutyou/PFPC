@@ -1,11 +1,11 @@
 function solvers(conf::T) where T<:Float64
     ## Initialization
-    u = zeros(Float64,2*nnode)
-    u_old = zeros(Float64,2*nnode)
-    epsilon = zeros(Float64,3,4*nel)
-    Hn1 = zeros(Float64,4,nel)
-    d1 = zeros(Float64,nnode)
-    dg1=zeros(Float64,4*nel)
+    u = zeros(Float64,2*nnode_u)
+    u_old = zeros(Float64,2*nnode_u)
+    # epsilon = zeros(Float64,3,4*nel)
+    Hn1 = zeros(Float64,9,nel)
+    d1 = zeros(Float64,nnode_d)
+    # dg1=zeros(Float64,4*nel)
     d1_old = deepcopy(d1)
     # iter_storage = zeros(Float64,step_total+1) ##迭代次数
     # time_storge = zeros(Float64,step_total+1) ##收敛时间
@@ -14,7 +14,7 @@ function solvers(conf::T) where T<:Float64
     # Assemble whole Stiffness matrix
     begin
         @info "Formulating stiffness matrix takes"
-        @time KK=Kmatrix(element, Bu, detjacob,DK,iK,jK)
+        @time KK = Kmatrix(element, Bu, detjacob_u,DK,iKu,jKu,"Q8")
     end
     # ##Initial displacement
     # u[loaddofs] .= u_increment
@@ -24,21 +24,19 @@ function solvers(conf::T) where T<:Float64
     function monoli_initialStiff()
         fid=open("test.dat","w")
         for stp=1:step_total
-            # print( "step=: $stp")
-            if stp<=200
+            print( "step=: $stp")
+            if stp<=100
                 u_increment += u_inc1
             else
                 u_increment += u_inc2
             end
             #
-            # d1_ref = zeros(Float64,nnode)
-            # u_ref = zeros(Float64,2*nnode)
             residual = zeros(Float64,1) ##每一步的最大残差
             ## u d iteration until
             err_d = 1.0; err_u = 1.0; nit = 0
             record = @timed while (max(err_d,err_u)>tol) && (nit<maxit)
                 nit+=1
-                # @info "nit_d=$nit"
+                @info "nit_d=$nit"
                 # compute displacement field u
                 u, KK = d2u(u_increment,stp,u,d1)
                 d1, Hn1 = u2d(u, Hn1)

@@ -9,28 +9,28 @@ function boundary(node::Array{T2},element::Array{T1}) where {T1<:Int, T2<:Float6
     # xmaxlow::Array{T1}=findall((node[:,2].<=9.9) .& (node[:,1].==maximum(node[:,1]))) ## 7.low-right
     # eval(:(using DelimitedFiles))
     fix_x = try
-        union(readdlm("fix_x.txt",',',Int)[:])
+        union(readdlm("fix_x_q8.txt",',',Int)[:])
     catch y
         if isa(y, ArgumentError)
             Int64[]
         end
     end
     fix_y = try
-        union(readdlm("fix_y.txt",',',Int)[:])
+        union(readdlm("fix_y_q8.txt",',',Int)[:])
     catch y
         if isa(y, ArgumentError)
             Int64[]
         end
     end
     load_x = try
-        union(readdlm("load_x.txt",',',Int)[:])
+        union(readdlm("load_x_q8.txt",',',Int)[:])
     catch y
         if isa(y, ArgumentError)
             Int64[]
         end
     end
     load_y = try
-        union(readdlm("load_y.txt",',',Int)[:])
+        union(readdlm("load_y_q8.txt",',',Int)[:])
     catch y
         if isa(y, ArgumentError)
             Int64[]
@@ -48,10 +48,8 @@ function boundary(node::Array{T2},element::Array{T1}) where {T1<:Int, T2<:Float6
     loaddofs::Array{T1}=union(loaddofsx,loaddofsy)
     # loaddofs::Array{T1}=union(xdirect(ymax))
     freedofs::Array{T1}=setdiff(1:2size(node,1),fixeddofs,loaddofs)
-    loaddofs_d::Array{T1} = Node_set1
-    freedofs_d::Array{T1} = setdiff(1:size(node,1), Node_set1)
 #     # xmaxtop=intersect(find(node[:,2].>=102.5),find((node[:,1].==maximum(node[:,1])))) ## 8.top-right
-    return fixeddofs, loaddofs, freedofs, loaddofs_d, freedofs_d
+    return fixeddofs, loaddofs, freedofs
 end
 @info "Formulating the arrays of freedom degree takes"
-@time fixeddofs, loaddofs, freedofs, loaddofs_d, freedofs_d=boundary(node,element)
+@time fixeddofs, loaddofs, freedofs = boundary(node,element)

@@ -4,7 +4,7 @@ function Hn1_comp!(Hn1::Array{T,2},εᵉ::Array{T,2}) where T<:Float64
     # σᴮ::Array{T,2} = D0*(ε - εᵖ)
     # P, J2, s =FemBase.invariant(σᴮ,"plane-stress")
     # idg2=findall(dg2.<0.9)
-    ψᵉ = zeros(Float64,4*nel)
+    ψᵉ = zeros(Float64,9*nel)
     # ψᵉ = gc/ls*d0*(1.0-(1.0-d0)^2)^2/2.0/(1.0-d0)*1.25e10 .+ zeros(4*nel)
     ##此处要保证Hn的初始值，不然第二次d循环求解时dg趋向于0，或者在初始化Hn的时候直接进行赋值
     # # β = zeros(T,4*nel)
@@ -42,7 +42,7 @@ function Hn1_comp!(Hn1::Array{T,2},εᵉ::Array{T,2}) where T<:Float64
     #    0.5.*operator_dev(εᵉ[:,Mat_ind2])[3,:].^2)
     D1::Array{T,1} = max.(0.0, ψᵉ)
     # D1 = zeros(size(ψᵉ))
-    Hn1::Array{T,2} = max.(reshape(D1,4,nel),Hn1)
+    Hn1::Array{T,2} = max.(reshape(D1,9,nel),Hn1)
     return Hn1
 end
 ##
@@ -53,8 +53,3 @@ function Hn1_comp!(H0::Array{T},Hn1::Array{T,2},ψᵖ::Array{T},CC::Array{T}) wh
     return Hn1
 end
 #
-function Hn2_comp!(ψᵖ::Array{T,1},Hn2::Array{T,2}) where T<:Float64
-    D1::Array{T,1} = max.(0,ψᵖ)
-    Hn2::Array{T,2} = max.(reshape(D1,4,size(element,1)),Hn2)
-    return  Hn2
-end

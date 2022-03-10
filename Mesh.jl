@@ -1,10 +1,10 @@
 
 function Mesh()
     eval(:(using DelimitedFiles))
-    node::Array{Float64,2}=readdlm("node.txt",',')[:,2:3]
+    node::Array{Float64,2}=readdlm("node_q8.txt",',')[:,2:3]
     # fid2=open("data_U1_F1.dat","w")
     # writedlm(fid2,readdlm("node.txt",',')[:,2:3])
-    element::Array{Int64,2}=readdlm("element.txt",',')[:,2:5]
+    element::Array{Int64,2}=readdlm("element_q8.txt",',')[:,2:9]
     Mat_set1 = try
         union((readdlm("Mat_set1.txt",',',Int))[:])
     catch y

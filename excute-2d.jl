@@ -8,7 +8,6 @@ include("Mesh.jl") #include functions:node, element
 include("boundary.jl")
 include("shapeFunc.jl")
 include("solvers.jl")
-include("solvers_Steffensen.jl")
 include("K_f_matrix.jl")
 include("d2u.jl")
 include("Hn.jl")
@@ -30,81 +29,47 @@ const gc1 = gc
 const Jb0 = [1/3 1/3 0.0; 1/3 1/3 0.0; 0.0 0.0 0.0]
 const Kb0 = [2/3 -1/3 0.0; -1/3 2/3 0; 0 0 0.5]
 ## Initialization of integrative parameters
-  const maxit=1000
+  const maxit=200
   const tol=1.0e-3
-  nnode=size(node,1)
+  nnode_u = size(node,1)
+  nnode_d = size(union(element[:,1:4]),1)
   nel=size(element,1)
   ##
    planetype = "plane-strain"
-  const E12 =  E0
   # const λ1, μ1 = E1*v/((1.0+v)*(1.0-2.0v)), E1/(2.0*(1.0+v))
   # const λ2, μ2 = E2*v/((1.0+v)*(1.0-2.0v)), E2/(2.0*(1.0+v))
   # const G1, Kv1=μ1, λ1+2/3*μ1
   # const G2, Kv2=μ2, λ2+2/3*μ2
   # # const D1, D2=E1/(1-v^2)*[1 v 0;v 1 0;0 0 (1-v)/2], E2/(1-v^2)*[1 v 0;v 1 0;0 0 (1-v)/2]##plane-stress
   # const D1, D2=[λ1+2.0μ1 λ1 0.0;λ1 λ1+2.0μ1 0.0;0.0 0.0 μ1], [λ2+2.0μ2 λ2 0.0;λ2 λ2+2.0μ2 0.0;0.0 0.0 μ2]  ##plane-strain
-  Mat_1 = map(x->collect(4*(x-1)+1:4*x), Mat_set1)
-  Mat_2 = map(x->collect(4*(x-1)+1:4*x), Mat_set2)
-  Mat_ind1 = Array{Int64}([])
-  Mat_ind2 = Array{Int64}([])
-  for i=1:size(Mat_1,1)
-      append!(Mat_ind1,getindex(Mat_1,i))
-  end
-  for i=1:size(Mat_2,1)
-      append!(Mat_ind2,getindex(Mat_2,i))
-  end
-  Mat_ind12 = union(Mat_ind1,Mat_ind2)
-  Mat_ind0 = setdiff(1:4*nel,Mat_ind12)
-  Mat_set12 = union(Mat_set1,Mat_set2)
-  Mat_set0 = setdiff(1:nel,Mat_set12)
-  DK0 = Array{Float64,2}(undef,9,4*size(element,1))
-  # DK[:,Mat_ind0[:]] = kron(reshape(D1,9),ones(1,size(Mat_ind0,1)))
-  # DK[:,Mat_ind12[:]] = kron(reshape(D2,9),ones(1,size(Mat_ind12,1)))
-  E = Array{Float64,1}(undef,4*nel)
+  DK0 = Array{Float64,2}(undef,9,9nel)
   # AA = Array{Float64,1}(undef,4*nel) ## frictional coefficient
   # @load "D:\\Columbia_University\\precrack\\alfa=30-conf=0\\E.jld" E
-  λ = Array{Float64,1}(undef,4*nel)
-  μ = Array{Float64,1}(undef,4*nel)
-  Kv = Array{Float64,1}(undef,4*nel)
-  for iel in Mat_set0
-      # AA[4*(iel-1)+1:4*iel] .= A0
-      E[4*(iel-1)+1:4*iel] .= E0
-      # λ[4*(iel-1)+1:4*iel] = E[4*(iel-1)+1:4*iel]*v/((1.0+v)*(1.0-2.0v))
-      λ[4*(iel-1)+1:4*iel] .= λ0
-      # μ[4*(iel-1)+1:4*iel] = E[4*(iel-1)+1:4*iel]/(2.0*(1.0+v))
-      μ[4*(iel-1)+1:4*iel] .= μ0
-      Kv[4*(iel-1)+1:4*iel] = λ[4*(iel-1)+1:4*iel] .+ 2.0/3.0 .* μ[4*(iel-1)+1:4*iel]
-      DK0[:,4*(iel-1)+1:4*iel] = [λ[4*(iel-1)+1:4*iel]'.+2.0μ[4*(iel-1)+1:4*iel]'; λ[4*(iel-1)+1:4*iel]';
-           zeros(1,4); λ[4*(iel-1)+1:4*iel]'; λ[4*(iel-1)+1:4*iel]'.+2.0μ[4*(iel-1)+1:4*iel]';
-           zeros(1,4); zeros(1,4); zeros(1,4); μ[4*(iel-1)+1:4*iel]'] ##平面应变
-      # DK0[:,4*(iel-1)+1:4*iel] = kron(E[4*(iel-1)+1:4*iel]'./(1-v^2), [1; v; 0;v; 1; 0;0; 0; (1-v)/2]) ##平面应力
-  end
-  for iel in Mat_set12
-      # AA[4*(iel-1)+1:4*iel] .= A01
-      E[4*(iel-1)+1:4*iel] .= E0 #.*(-log.(1.0.-rand(1))).^(1.0/m)
-      # λ[4*(iel-1)+1:4*iel] = E[4*(iel-1)+1:4*iel]*v/((1.0+v)*(1.0-2.0v))
-      λ[4*(iel-1)+1:4*iel] .= λ0
-      # μ[4*(iel-1)+1:4*iel] = E[4*(iel-1)+1:4*iel]/(2.0*(1.0+v))
-      μ[4*(iel-1)+1:4*iel] .= μ0
-      Kv[4*(iel-1)+1:4*iel] = λ[4*(iel-1)+1:4*iel] .+ 2.0/3.0 .* μ[4*(iel-1)+1:4*iel]
-      DK0[:,4*(iel-1)+1:4*iel] = [λ[4*(iel-1)+1:4*iel]'.+2.0μ[4*(iel-1)+1:4*iel]'; λ[4*(iel-1)+1:4*iel]';
-           zeros(1,4); λ[4*(iel-1)+1:4*iel]'; λ[4*(iel-1)+1:4*iel]'.+2.0μ[4*(iel-1)+1:4*iel]';
-           zeros(1,4); zeros(1,4); zeros(1,4); μ[4*(iel-1)+1:4*iel]']
+  λ = Array{Float64,1}(undef,9*nel)
+  μ = Array{Float64,1}(undef,9*nel)
+  Kv = Array{Float64,1}(undef,9*nel)
+  for iel in 1:nel
+      λ[9*(iel-1)+1:9*iel] .= λ0
+      μ[9*(iel-1)+1:9*iel] .= μ0
+      Kv[9*(iel-1)+1:9*iel] = λ[9*(iel-1)+1:9*iel] .+ 2.0/3.0 .* μ[9*(iel-1)+1:9*iel]
+      DK0[:,9*(iel-1)+1:9*iel] = [λ[9*(iel-1)+1:9*iel]'.+2.0μ[9*(iel-1)+1:9*iel]'; λ[9*(iel-1)+1:9*iel]';
+           zeros(1,9); λ[9*(iel-1)+1:9*iel]'; λ[9*(iel-1)+1:9*iel]'.+2.0μ[9*(iel-1)+1:9*iel]';
+           zeros(1,9); zeros(1,9); zeros(1,9); μ[9*(iel-1)+1:9*iel]'] ##平面应变
       # DK0[:,4*(iel-1)+1:4*iel] = kron(E[4*(iel-1)+1:4*iel]'./(1-v^2), [1; v; 0;v; 1; 0;0; 0; (1-v)/2]) ##平面应力
   end
   G = deepcopy(μ)
   DK = deepcopy(DK0)
-  Jb = kron(vec(Jb0),ones(1,4nel))
-  Kb = kron(vec(Kb0),ones(1,4nel))
+  Jb = kron(vec(Jb0),ones(1,9nel))
+  Kb = kron(vec(Kb0),ones(1,9nel))
   # DK = kron(reshape(D1,9),ones(1,4*size(element,1)))
   ##🎺 DK需考虑不均质点💚
 ## output
-u_inc1, u_inc2, step_total = 5e-5, 1e-5, Int(200+0.005/1e-5)
+u_inc1, u_inc2, step_total = 1e-4, 5e-5, Int(100+0.005/5e-5)
 const numd=step_total ##output number
 const aa=Int.(step_total/numd)
 begin ##初始化结果储存矩阵
-    numD = Array{Float64,2}(undef,size(node,1),numd); numD2 = Array{Float64,2}(undef,2*size(node,1),numd)#
-    numD3 = Array{Float64,3}(undef,4,nel,numd); numD4 = Array{Int32,2}(undef,maxit,step_total+1); numD5 = Array{Float64,2}(undef,maxit,step_total+1)
+    numD = Array{Float64,2}(undef,nnode_d,numd); numD2 = Array{Float64,2}(undef,2*nnode_u,numd)#
+    numD3 = Array{Float64,3}(undef,9,nel,numd); numD4 = Array{Int32,2}(undef,maxit,step_total+1); numD5 = Array{Float64,2}(undef,maxit,step_total+1)
     Fload1 = Array{Float64}(undef,step_total+1); Uload1 = Array{Float64}(undef,step_total+1)
     Fload2 = Array{Float64}(undef,step_total+1); Uload2 = Array{Float64}(undef,step_total+1)
     iter_storage = Array{Float64}(undef,step_total+1); time_storge = Array{Float64}(undef,step_total+1)
@@ -118,19 +83,19 @@ end
     # include("out_E.jl")
     # nodeE = out_E(nel,node,element)
     # gNodeeps=pmap(out_accumulated_epsilonp, numD2[:,i] for i =1:numd)
-    for opt=400:1:400
+    for opt=100:1:109
         # A=[node sqrt.(numD2[2:2:end,opt] .^2 .+ numD2[1:2:end,opt] .^2 )]
-        A=[node numD[:,opt]]
+        A=[node[1:nnode_d,:] numD[:,opt]]
         # A=[node d1]
         # A=[node out_accumulated_epsilonp(numD5[1,:,opt])]
         #numD[:,opt] out_accumulated_epsilonp(numD2[:,opt])
         # mat=[A;element]
         fid=open("d_data$opt.dat","w")
-        StringVariable="TITLE=\"2Dmodel\" VARIABLES=\"X\",\"Y\",\"d1\" ZONE N=$nnode,E=$nel,F=FEPOINT,ET=QUADRILATERAL, "
+        StringVariable="TITLE=\"2Dmodel\" VARIABLES=\"X\",\"Y\",\"d1\" ZONE N=$nnode_d,E=$nel,F=FEPOINT,ET=QUADRILATERAL, "
         write(fid,StringVariable)
         # m,n=size(mat)
         writedlm(fid,A)
-        writedlm(fid,element)
+        writedlm(fid,element[:,1:4])
         close(fid)
     end
     # nx = (node[element[:,1],1] .+ node[element[:,2],1] .+ node[element[:,3],1] .+ node[element[:,4],1])/4.0

@@ -2,16 +2,29 @@
 # include("Interpfunc.jl")
 # Definition of global stiffness_matrix
 #
-function Kmatrix(element::Array{T1}, Bu::Array{T2}, detjacob::Array{T2},DK::Array{T2},iK::Array{T1},jK::Array{T1}) where {T1<:Int, T2<:Float64}
-    sK=SharedArray{Float64,2}(64,size(element,1))
+function Kmatrix(element::Array{T1}, Bu::Array{T2}, detjacob_u::Array{T2},DK::Array{T2},iKu::Array{T1},jKu::Array{T1},::String #= Q8 =#) where {T1<:Int, T2<:Float64}
+    sK=SharedArray{Float64,2}(256,size(element,1))
     @sync @distributed for iel=1:size(element,1)
-        sK[:,iel] = reshape(kron(detjacob[:,iel]',ones(8,3)).*Bu[:,8*(iel-1)+1:8*iel]'*blockdiag(sparse(reshape(DK[:,4*(iel-1)+1],3,3)),sparse(reshape(DK[:,4*(iel-1)+2],3,3)),
-        sparse(reshape(DK[:,4*(iel-1)+3],3,3)),sparse(reshape(DK[:,4*(iel-1)+4],3,3)))*Bu[:,8*(iel-1)+1:8*iel],64)
+        sK[:,iel] = reshape(kron(detjacob_u[:,iel]',ones(16,3)).*Bu[:,16*(iel-1)+1:16*iel]'*blockdiag(sparse(reshape(DK[:,9*(iel-1)+1],3,3)),
+        sparse(reshape(DK[:,9*(iel-1)+2],3,3)), sparse(reshape(DK[:,9*(iel-1)+3],3,3)),
+        sparse(reshape(DK[:,9*(iel-1)+4],3,3)), sparse(reshape(DK[:,9*(iel-1)+5],3,3)),
+        sparse(reshape(DK[:,9*(iel-1)+6],3,3)), sparse(reshape(DK[:,9*(iel-1)+7],3,3)),
+        sparse(reshape(DK[:,9*(iel-1)+8],3,3)), sparse(reshape(DK[:,9*(iel-1)+9],3,3)),) * Bu[:,16*(iel-1)+1:16*iel], 256)
     end
-    K=sparse(iK,jK,sdata(sK)[:])
+    K=sparse(iKu,jKu,sdata(sK)[:])
     # GC.gc()
     return K
 end
+# function Kmatrix(element::Array{T1}, Bu::Array{T2}, detjacob::Array{T2},DK::Array{T2},iK::Array{T1},jK::Array{T1}) where {T1<:Int, T2<:Float64}
+#     sK=SharedArray{Float64,2}(64,size(element,1))
+#     @sync @distributed for iel=1:size(element,1)
+#         sK[:,iel] = reshape(kron(detjacob[:,iel]',ones(8,3)).*Bu[:,8*(iel-1)+1:8*iel]'*blockdiag(sparse(reshape(DK[:,4*(iel-1)+1],3,3)),sparse(reshape(DK[:,4*(iel-1)+2],3,3)),
+#         sparse(reshape(DK[:,4*(iel-1)+3],3,3)),sparse(reshape(DK[:,4*(iel-1)+4],3,3)))*Bu[:,8*(iel-1)+1:8*iel],64)
+#     end
+#     K=sparse(iK,jK,sdata(sK)[:])
+#     # GC.gc()
+#     return K
+# end
 ##根据内部应力计算内部等效节点力
 function FMat(node::Array{T2},element::Array{T1},Bu::Array{T2},detjacob::Array{T2},σ::Array{T2},edofMat::Array{T1}) where {T1<:Int, T2<:Float64}
     f=SharedArray{Float64,1}(2*size(node,1))
