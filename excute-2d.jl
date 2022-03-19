@@ -1,6 +1,6 @@
 #
 using Distributed, JLD2
-addprocs(5)
+addprocs(3)
 @everywhere using LinearAlgebra, Distributed, SparseArrays, SharedArrays, DelimitedFiles
 include("Mesh.jl") #include functions:node, element
 @everywhere include("FemBase.jl")
@@ -29,7 +29,7 @@ const gc1 = gc
 const Jb0 = [1/3 1/3 0.0; 1/3 1/3 0.0; 0.0 0.0 0.0]
 const Kb0 = [2/3 -1/3 0.0; -1/3 2/3 0; 0 0 0.5]
 ## Initialization of integrative parameters
-  const maxit=200
+  const maxit=50
   const tol=1.0e-3
   nnode_u = size(node,1)
   nnode_d = size(union(element[:,1:4]),1)
@@ -83,7 +83,7 @@ end
     # include("out_E.jl")
     # nodeE = out_E(nel,node,element)
     # gNodeeps=pmap(out_accumulated_epsilonp, numD2[:,i] for i =1:numd)
-    for opt=100:1:109
+    for opt=100:10:200
         # A=[node sqrt.(numD2[2:2:end,opt] .^2 .+ numD2[1:2:end,opt] .^2 )]
         A=[node[1:nnode_d,:] numD[:,opt]]
         # A=[node d1]
@@ -125,11 +125,11 @@ end
     #     ,size=(500,320),legend=:topleft,dpi=300)
     # savefig("F1vsU1")
     ##data storage
-    @save pwd()*"\\numD.jld2" numD
-    @save pwd()*"\\numD2.jld2" numD2
-    @save pwd()*"\\numD3.jld2" numD3
-    @save pwd()*"\\iter_storage.jld2" iter_storage
-    @save pwd()*"\\time_storge.jld2" time_storge
+    @save pwd()*"/numD.jld2" numD
+    @save pwd()*"/numD2.jld2" numD2
+    @save pwd()*"/numD3.jld2" numD3
+    @save pwd()*"/iter_storage.jld2" iter_storage
+    @save pwd()*"/time_storge.jld2" time_storge
     fid=open("time_storge.dat","w")
     writedlm(fid,time_storge)
     close(fid)
