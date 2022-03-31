@@ -1,7 +1,7 @@
 #六面体 8个节点 24个u自由度，8个d自由度
 function ShapeFuncHexLinear(node::Array{T2},element::Array{T1}) where {T1<:Int, T2<:Float64}
     ##1.feisoq
-    function feisoq()
+    function feisoq(r::T2,s::T2,t::T2)
         #求导derivation
         dNdr::Array{T2} = [-0.125*(1 - t)*(1 - s), -0.125*(1 + t)*(1 - s), 0.125*(1 + t)*(1 - s),  0.125*(1 - t)*(1 - s),
                            -0.125*(1 - t)*(1 + s), -0.125*(1 + t)*(1 + s), 0.125*(1 + t)*(1 + s),  0.125*(1 - t)*(1 + s) ]
@@ -77,7 +77,7 @@ function ShapeFuncHexLinear(node::Array{T2},element::Array{T1}) where {T1<:Int, 
             N7::T2 = 1/8*(1+r)*(1+s)*(1+t)
             N8::T2 = 1/8*(1+r)*(1+s)*(1-t)
             Nd[i,nnel*(iel-1)+1:nnel*iel]=[N1 N2 N3 N4 N5 N6 N7 N8]
-            dNdr, dNds, dNdt =feisoq()
+            dNdr, dNds, dNdt =feisoq(r, s, t)
             jacob =fejacob(nnel,dNdr,dNds,dNdt,Xcoor,Ycoor,Zcoor) #雅可比矩阵 
             detjacob[i,iel]=det(jacob)
             invjacob =inv(jacob)
@@ -125,7 +125,7 @@ end
 #5.自由度指标
 function indices_fields() 
     nel=size(element,1);
-    edofMat=zeros(Int,nel,3nnel);
+    edofMat=zeros(Int,nel,24);
     for iel=1:nel
         edofMat[iel,1]=3*element[iel,1]-2
         edofMat[iel,2]=3*element[iel,1]-1
