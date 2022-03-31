@@ -59,10 +59,10 @@ function boundary(node::Array{T2},element::Array{T1}) where {T1<:Int, T2<:Float6
     # end
     loaddofsx::Array{T1}=xdirect(load_x)
     loaddofsy::Array{T1}=ydirect(load_y)
-    loaddofsz::Array{T1}=ydirect(load_z)
+    loaddofsz::Array{T1}=zdirect(load_z)
     loaddofs::Array{T1}=union(loaddofsx,loaddofsy,loaddofsz)
     # loaddofs::Array{T1}=union(xdirect(ymax))
-    freedofs::Array{T1}=setdiff(1:2size(node,1),fixeddofs,loaddofs)
+    freedofs::Array{T1}=setdiff(1:3size(node,1),fixeddofs,loaddofs)
 #     # xmaxtop=intersect(find(node[:,2].>=102.5),find((node[:,1].==maximum(node[:,1])))) ## 8.top-right
     return fixeddofs, loaddofs, freedofs
 end
