@@ -1,16 +1,15 @@
 # Definition of global stiffness_matrix
 # Ndp可比Nd*Nd少作一次矩阵运算 
-function Juu_matrix(C_set91::Array{T2}) where {T1<:Int, T2<:Float64}
-    uuK=SharedArray{Float64,2}(144,size(element,1))
+function Kmatrix(element::Array{T1}, Bu::Array{T2}, detjacob_u::Array{T2},DK::Array{T2},iKu::Array{T1},jKu::Array{T1},::String #= C3D8 =#) where {T1<:Int, T2<:Float64}
+    sK=SharedArray{Float64,2}(576,size(element,1))
     @sync @distributed for iel=1:size(element,1)
-        uuK[:,iel] = reshape(kron(detjacob[:,iel]',ones(12,6)).*Bu[:,12*(iel-1)+1:12*iel]'*blockdiag(sparse(reshape(C_set91[:,4*(iel-1)+1],6,6)),
-        sparse(reshape(C_set91[:,4*(iel-1)+2],6,6)),sparse(reshape(C_set91[:,4*(iel-1)+3],6,6)),
-        sparse(reshape(C_set91[:,4*(iel-1)+4],6,6)))*Bu[:,12*(iel-1)+1:12*iel],144)
+        sK[:,iel] = reshape(kron(detjacob_u[:,iel]',ones(24,6)).*Bu[:,24*(iel-1)+1:24*iel]'*blockdiag(sparse(reshape(DK[:,8*(iel-1)+1],6,6)),
+        sparse(reshape(DK[:,8*(iel-1)+2],6,6)), sparse(reshape(DK[:,8*(iel-1)+3],6,6)),
+        sparse(reshape(DK[:,8*(iel-1)+4],6,6)), sparse(reshape(DK[:,8*(iel-1)+5],6,6)),
+        sparse(reshape(DK[:,8*(iel-1)+6],6,6)), sparse(reshape(DK[:,8*(iel-1)+7],6,6)),
+        sparse(reshape(DK[:,8*(iel-1)+8],6,6))) * Bu[:,24*(iel-1)+1:24*iel], 576)
     end
-    #256*1 = (1*9*ones(16,3)).* (16*27) * (27*27) * (27*16)
-    #144*1 = (1*4*ones(12,6)).*(12*24)*(24*24)*(24*12)
-    Juu = sparse(iKu,jKu,uuK[:]) ##udofs*udofs
-    return Juu
+    return sparse(iKu,jKu,vec(sdata(sK)))
 end
 
 #不更新K，只更新u的情况下计算f_int
