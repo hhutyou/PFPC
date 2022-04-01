@@ -45,7 +45,8 @@ function solvers() where T<:Float64
                 # end
                 ## residual
                 norm(u .- u_old, Inf) < abstol_u && norm(d1 .- d1_old, Inf) < abstol_d ? break : nothing
-                err_u = norm(u .- u_old,2)/norm(u)
+                # err_u = norm(u .- u_old,2)/norm(u)
+                err_u = 0.0
                 err_d = norm(d1 .- d1_old,2)/norm(d1)
                 ##
                 u_old .= u
