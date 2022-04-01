@@ -14,7 +14,10 @@ function d2u(u_increment::T2,stp::T1,u::Array{T2},d1::Array{T2}) where {T1<:Int6
     DK = 3Kv0 .* Jb .+ 2μ0 .* Kb .+ kron((m0.(dg1) .- 1.0), ones(1,36))' .* (3Kv0 .* kron(hc.(operator_tr(epsilon)), ones(1,36))' .* Jb .+ 2μ0 .* Kb  )
     KK = Kmatrix(element, Bu, detjacob,DK,iKu,jKu,"C3D8")
     u[loaddofs] .= u_increment
-    u[freedofs] .= -KK[freedofs, freedofs] \ (KK[freedofs, loaddofs] * (u[loaddofs]))
+    # u[freedofs] .= -KK[freedofs, freedofs] \ (KK[freedofs, loaddofs] * (u[loaddofs]))
+    psd = MKLPardisoSolver()
+    set_nprocs!(psd, ncore)
+    u[freedofs] .= - solve(psd, KK[freedofs, freedofs], (KK[freedofs, loaddofs] * u[loaddofs]))
     ##
     return u, KK
 end

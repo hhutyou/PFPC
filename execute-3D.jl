@@ -1,7 +1,9 @@
 #
 using Distributed
-addprocs(4-nprocs())
-@everywhere using LinearAlgebra, Distributed, SparseArrays, SharedArrays, DelimitedFiles
+const ncore = 16
+addprocs(ncore-nprocs())
+print("Run with ", nprocs(), " processes")
+@everywhere using LinearAlgebra, Distributed, SparseArrays, SharedArrays, DelimitedFiles, Pardiso
 include("Mesh.jl") #include functions:node, element
 @everywhere include("FemBase.jl")
 # using .FemBase: xdirect, ydirect, principle, invariant

@@ -23,7 +23,9 @@ function u2d(u::Array{T,1},Hn1::Array{T,2}) where T<:Float64
     Kd::SparseMatrixCSC = sparse(iKd, jKd, vec(sKKd_B).+vec(sKKd_D))#::SparseMatrixCSC
     # Kd::SparseMatrixCSC = sparse(iKd,jKd,reshape(sKKd_D,16*nel))
     Fd::SparseVector = sparse(iFd, jFd, vec(sFD))#::SparseVector
-    d1 = Kd \ Array(Fd)
+    # d1 = Kd \ Array(Fd)
+    psu = MKLPardisoSolver()
+    set_nprocs!(psu, ncore)
     ##
-    return vec(d1), Hn1
+    return solve(psu, Kd, Array(Fd)), Hn1
 end

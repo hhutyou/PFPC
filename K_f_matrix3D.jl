@@ -3,11 +3,11 @@
 function Kmatrix(element::Array{T1}, Bu::Array{T2}, detjacob_u::Array{T2},DK::Array{T2},iKu::Array{T1},jKu::Array{T1},::String #= C3D8 =#) where {T1<:Int, T2<:Float64}
     sK=SharedArray{Float64,2}(576,size(element,1))
     @sync @distributed for iel=1:size(element,1)
-        sK[:,iel] = reshape(kron(detjacob_u[:,iel]',ones(24,6)).*Bu[:,24*(iel-1)+1:24*iel]'*blockdiag(sparse(reshape(DK[:,8*(iel-1)+1],6,6)),
+        sK[:,iel] = vec(kron(detjacob_u[:,iel]',ones(24,6)).*Bu[:,24*(iel-1)+1:24*iel]'*blockdiag(sparse(reshape(DK[:,8*(iel-1)+1],6,6)),
         sparse(reshape(DK[:,8*(iel-1)+2],6,6)), sparse(reshape(DK[:,8*(iel-1)+3],6,6)),
         sparse(reshape(DK[:,8*(iel-1)+4],6,6)), sparse(reshape(DK[:,8*(iel-1)+5],6,6)),
         sparse(reshape(DK[:,8*(iel-1)+6],6,6)), sparse(reshape(DK[:,8*(iel-1)+7],6,6)),
-        sparse(reshape(DK[:,8*(iel-1)+8],6,6))) * Bu[:,24*(iel-1)+1:24*iel], 576)
+        sparse(reshape(DK[:,8*(iel-1)+8],6,6))) * Bu[:,24*(iel-1)+1:24*iel])
     end
     return sparse(iKu,jKu,vec(sdata(sK)))
 end
