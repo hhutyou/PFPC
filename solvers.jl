@@ -73,6 +73,9 @@ function solvers(conf::T) where T<:Float64
                 #
                 writedlm(fid,residual)
             end
+            if  stp >= 120
+                crack_2d_display(d1,stp)  #路径直接存为dat,tecplot中查看
+            end
             # STOnit[stp]=nit
             # if nit==maxit && STOnit[stp-1] != maxit
             #     u_increment=0.25*u_increment
