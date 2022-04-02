@@ -1,9 +1,9 @@
 #
 using Distributed
-const ncore = 16
+const ncore = 8
 addprocs(ncore-nprocs())
 print("Run with ", nprocs(), " processes")
-@everywhere using LinearAlgebra, Distributed, SparseArrays, SharedArrays, DelimitedFiles, Pardiso
+@everywhere using LinearAlgebra, Distributed, SparseArrays, SharedArrays, DelimitedFiles, Pardiso,StatsBase,Plots
 include("Mesh.jl") #include functions:node, element
 @everywhere include("FemBase.jl")
 # using .FemBase: xdirect, ydirect, principle, invariant
@@ -17,6 +17,9 @@ include("u2d.jl")
 include("sigma_plus.jl")
 include("sigma_minus.jl")
 include("sigma_dev.jl")
+include("crack_3d_display.jl")
+include("regularizeNd.jl")
+include("SubfuncForNd.jl")
 # include("solvers_initial_d.jl")
 # include("integration_d.jl")
 #
@@ -25,7 +28,7 @@ const E0, v = 210.0, 0.3
 const λ0, μ0 = 121.15, 80.77 ## kN/mm²
 const G0, Kv0=μ0, λ0+2/3*μ0
 # phase field parameters,,,
-const ls, k = 0.0075, 1e-16
+const mesh_size, ls, k = 0.00375, 0.0075, 1e-16
 const gc = 2.7e-3 ## kN/mm
 const gc1 = gc
 const Jb0 = 1/3 * [1.0  0.0  0.0  0.0  0.0  0.0;

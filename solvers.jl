@@ -78,7 +78,11 @@ function solvers() where T<:Float64
                 open("time_storge.txt", "a") do io
                     writedlm(io, record[2])
                 end
+                if  stp >= 100
+                    crack_3d_display(d1,stp)  #路径直接存为dat
+                end
             end
+
             # STOnit[stp]=nit
             # if nit==maxit && STOnit[stp-1] != maxit
             #     u_increment=0.25*u_increment
