@@ -72,10 +72,12 @@ function solvers() where T<:Float64
                     end
                     if  stp >= 100
                         point_cloud_index = findall(d1 .> dc) #找出d超过阈值的点的索引集合
-                        point_cloud_coordinates = view(node, point_cloud_index, [coordinate_reordering[x] for x in ["x", "y", "z"]])
-                        crack_path = crack_3d_display(point_cloud_coordinates, mesh_size, smoothness)  #路径直接存为dat
-                        open("crack_path_step$stp.dat", "w") do io
-                            writedlm(io, crack_path)
+                        if !isempty(point_cloud_index)
+                            point_cloud_coordinates = view(node, point_cloud_index, [coordinate_reordering[x] for x in ["x", "y", "z"]])
+                            crack_path = crack_3d_display(point_cloud_coordinates, mesh_size, smoothness)  #路径直接存为dat
+                            open("crack_path_step$stp.dat", "w") do io
+                                writedlm(io, crack_path)
+                            end
                         end
                     end
 
