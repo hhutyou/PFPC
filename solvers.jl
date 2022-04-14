@@ -69,6 +69,14 @@ function solvers() where T<:Float64
                         writedlm(io, [node[1:nnode_d,:] sqrt.(u[1:3:end] .^2 .+ u[2:3:end] .^2 .+ u[3:3:end] .^2) u[1:3:end] u[2:3:end] u[3:3:end]])
                         writedlm(io, element)
                     end
+                    if  stp >= 100
+                        point_cloud_index = findall(d1 .> dc) #找出d超过阈值的点的索引集合
+                        point_cloud_coordinates = view(node, point_cloud_index, [coordinate_reordering[x] for x in ["x", "y", "z"]])
+                        crack_path = crack_3d_display(point_cloud_coordinates, mesh_size, smoothness)  #路径直接存为dat
+                        open("crack_path_step$stp.dat", "w") do io
+                            writedlm(io, crack_path)
+                        end
+                    end
 
                 end
                 #
@@ -77,9 +85,6 @@ function solvers() where T<:Float64
                 end
                 open("time_storge.txt", "a") do io
                     writedlm(io, record[2])
-                end
-                if  stp >= 100
-                    crack_3d_display(d1,stp)  #路径直接存为dat
                 end
             end
 
