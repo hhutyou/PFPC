@@ -5,7 +5,7 @@ function solvers() where T<:Float64
     # epsilon = zeros(Float64,3,4*nel)
     Hn1 = zeros(Float64,8,nel)
     d1 = zeros(Float64,nnode_d)
-    d1[loaddofs_d] = 1.0
+    d1[loaddofs_d] .= 1.0
     # dg1=zeros(Float64,4*nel)
     d1_old = deepcopy(d1)
     # iter_storage = zeros(Float64,step_total+1) ##迭代次数

@@ -3,7 +3,7 @@ using Distributed
 const ncore = 8
 addprocs(ncore-nprocs())
 print("Run with ", nprocs(), " processes")
-@everywhere using LinearAlgebra, Distributed, SparseArrays, SharedArrays, DelimitedFiles, Pardiso,StatsBase,Plots
+@everywhere using LinearAlgebra, Distributed, SparseArrays, SharedArrays, DelimitedFiles, Pardiso, StatsBase, Plots
 include("Mesh.jl") #include functions:node, element
 @everywhere include("FemBase.jl")
 # using .FemBase: xdirect, ydirect, principle, invariant
