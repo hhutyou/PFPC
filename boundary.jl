@@ -29,6 +29,13 @@ function boundary(node::Array{T2},element::Array{T1}) where {T1<:Int, T2<:Float6
             Int64[]
         end
     end
+    fix_d = try
+        union(readdlm("fix_d.txt",',',Int)[:])
+    catch y
+        if isa(y, ArgumentError)
+            Int64[]
+        end
+    end
     load_x = try
         union(readdlm("load_x.txt",',',Int)[:])
     catch y
@@ -50,20 +57,29 @@ function boundary(node::Array{T2},element::Array{T1}) where {T1<:Int, T2<:Float6
             Int64[]
         end
     end
+    load_d = try
+        union(readdlm("load_d.txt",',',Int)[:])
+    catch y
+        if isa(y, ArgumentError)
+            Int64[]
+        end
+    end
     ##
-    fixeddofs=union(xdirect(fix_x), ydirect(fix_y), zdirect(fix_z))
-    # fixeddofs=union(ydirect(ymin),ydirect(ymax),xdirect(ymin))
+    fixeddofs = union(xdirect(fix_x), ydirect(fix_y), zdirect(fix_z))
+    fixeddofs_d = union(fix_d)
     ##
     # function xdirect(x::T) where T<: Nothing
     #     x=Int64[]
     # end
-    loaddofsx::Array{T1}=xdirect(load_x)
-    loaddofsy::Array{T1}=ydirect(load_y)
-    loaddofsz::Array{T1}=zdirect(load_z)
-    loaddofs::Array{T1}=union(loaddofsx,loaddofsy,loaddofsz)
+    loaddofsx::Array{T1} = xdirect(load_x)
+    loaddofsy::Array{T1} = ydirect(load_y)
+    loaddofsz::Array{T1} = zdirect(load_z)
+    loaddofs::Array{T1} = union(loaddofsx,loaddofsy,loaddofsz)
+    loaddofs_d::Array{T1} = union(load_d)
     # loaddofs::Array{T1}=union(xdirect(ymax))
     freedofs::Array{T1}=setdiff(1:3size(node,1),fixeddofs,loaddofs)
+    freedofs_d::Array{T1}=setdiff(1:size(node,1),fixeddofs_d,loaddofs_d)
 #     # xmaxtop=intersect(find(node[:,2].>=102.5),find((node[:,1].==maximum(node[:,1])))) ## 8.top-right
-    return fixeddofs, loaddofs, freedofs
+    return fixeddofs, loaddofs, freedofs, fixeddofs_d, loaddofs_d, freedofs_d
 end
-fixeddofs, loaddofs, freedofs = boundary(node,element) 
+fixeddofs, loaddofs, freedofs, fixeddofs_d, loaddofs_d, freedofs_d = boundary(node,element) 

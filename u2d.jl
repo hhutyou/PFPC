@@ -1,4 +1,4 @@
-function u2d(u::Array{T,1},Hn1::Array{T,2}) where T<:Float64
+function u2d(d1::Array{T},u::Array{T,1},Hn1::Array{T,2}) where T<:Float64
     epsilon = zeros(Float64,6,8*nel)
     ##
     UU = u[edofMat]
@@ -26,6 +26,7 @@ function u2d(u::Array{T,1},Hn1::Array{T,2}) where T<:Float64
     # d1 = Kd \ Array(Fd)
     psu = MKLPardisoSolver()
     set_nprocs!(psu, ncore)
+    d1[freedofs_d] .= - solve(psd, Kd[freedofs_d, freedofs_d], Kd[freedofs_d, loaddofs_d] * d1[loaddofs_d] .- Array(Fd[freedofs_d]))
     ##
-    return solve(psu, Kd, Array(Fd)), Hn1
+    return d1, Hn1
 end

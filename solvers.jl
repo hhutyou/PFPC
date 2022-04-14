@@ -5,6 +5,7 @@ function solvers() where T<:Float64
     # epsilon = zeros(Float64,3,4*nel)
     Hn1 = zeros(Float64,8,nel)
     d1 = zeros(Float64,nnode_d)
+    d1[loaddofs_d] = 1.0
     # dg1=zeros(Float64,4*nel)
     d1_old = deepcopy(d1)
     # iter_storage = zeros(Float64,step_total+1) ##迭代次数
@@ -38,7 +39,7 @@ function solvers() where T<:Float64
                 @info "nit_d=$nit"
                 # compute displacement field u
                 u, KK = d2u(u_increment,stp,u,d1)
-                d1, Hn1 = u2d(u, Hn1)
+                d1, Hn1 = u2d(d1, u, Hn1)
                 # if nit == 1
                 #     u_ref .= u
                 #     d1_ref .= d1
