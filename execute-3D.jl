@@ -86,8 +86,7 @@ const Kb0 = [2/3  -1/3  -1/3  0.0  0.0  0.0;
   ##🎺 DK需考虑不均质点💚
 ## output
 u_inc1, u_inc2, step_total = 1e-4, 5e-5, Int(100+0.005/5e-5)
-const numd=step_total ##output number
-const aa=Int.(step_total/numd)
+const timesteps_fields, timesteps_crack_path = 1, 5 ##output number
 ##计算及输出过程
 begin
     solvers()

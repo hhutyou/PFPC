@@ -57,7 +57,7 @@ function solvers() where T<:Float64
             end
             # "Storing the output data takes:"
             begin
-                if mod(stp,aa) == 0
+                if mod(stp,timesteps_fields) == 0
                     # output d
                     open("d_step_$stp.dat", "w") do io
                         write(io,"TITLE=\"PhaseField\" VARIABLES=\"X\",\"Y\",\"Z\",\"d\" ZONE N=$nnode_d,E=$nel,F=FEPOINT,ET=BRICK, ")
@@ -70,17 +70,16 @@ function solvers() where T<:Float64
                         writedlm(io, [node[1:nnode_d,:] sqrt.(u[1:3:end] .^2 .+ u[2:3:end] .^2 .+ u[3:3:end] .^2) u[1:3:end] u[2:3:end] u[3:3:end]])
                         writedlm(io, element)
                     end
-                    if  stp >= 100
-                        point_cloud_index = findall(d1 .> dc) #找出d超过阈值的点的索引集合
-                        if !isempty(point_cloud_index)
-                            point_cloud_coordinates = view(node, point_cloud_index, [coordinate_reordering[x] for x in ["x", "y", "z"]])
-                            crack_path = crack_3d_display(point_cloud_coordinates, mesh_size, smoothness)  #路径直接存为dat
-                            open("crack_path_step$stp.dat", "w") do io
-                                writedlm(io, crack_path)
-                            end
+                end
+                if  mod(stp,timesteps_crack_path) == 0
+                    point_cloud_index = findall(d1 .> dc) #找出d超过阈值的点的索引集合
+                    if !isempty(point_cloud_index)
+                        point_cloud_coordinates = view(node, point_cloud_index, [coordinate_reordering[x] for x in ["x", "y", "z"]])
+                        crack_path = crack_3d_display(point_cloud_coordinates, mesh_size, smoothness)  #路径直接存为dat
+                        open("crack_path_step$stp.dat", "w") do io
+                            writedlm(io, crack_path)
                         end
                     end
-
                 end
                 #
                 open("iter_storage.txt", "a") do io
