@@ -29,7 +29,8 @@ const λ0, μ0 = 121.15, 80.77 ## kN/mm²
 const G0, Kv0=μ0, λ0+2/3*μ0
 # phase field parameters,,,
 const ls, k = 0.0075, 1e-16
-const mesh_size, dc, smoothness = 0.00375, 0.99, 0.001 ## 拟合参数
+const mesh_size = 0.00375 ## 拟合参数
+const dc, smoothness = exp(-mesh_size/ls), 0.001 ## 拟合参数
 const coordinate_reordering = Dict{String, Int64}("x" =>1, "y" => 3, "z" => 2)
 const gc = 2.7e-3 ## kN/mm
 const gc1 = gc

@@ -80,7 +80,7 @@ function solvers() where T<:Float64
                         xi = minimum(x1): mesh_size : maximum(x1)
                         yi = minimum(y1): mesh_size : maximum(y1)
                         nGrid = [length(xi) length(yi)]
-                        if all(nGrid .>= 10)
+                        if all(nGrid .>= 5)
                             crack_path = crack_3d_display(point_cloud_coordinates, mesh_size, smoothness)  #路径直接存为dat
                             open("crack_path_step$stp.dat", "w") do io
                                 writedlm(io, crack_path)
