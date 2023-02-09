@@ -1,51 +1,90 @@
-function Hn1_comp!(Hn1::Array{T,2},εᵉ::Array{T,2}) where T<:Float64
-    ##
-    # σᴮ::Array{T,2} = σ
-    # σᴮ::Array{T,2} = D0*(ε - εᵖ)
-    # P, J2, s =FemBase.invariant(σᴮ,"plane-stress")
-    # idg2=findall(dg2.<0.9)
+function Hn1_comp!(Hn1::Array{T,2},epsilon_gauss::Array{T,2}) where T<:Float64
     ψᵉ = zeros(Float64,9*nel)
-    # ψᵉ = gc/ls*d0*(1.0-(1.0-d0)^2)^2/2.0/(1.0-d0)*1.25e10 .+ zeros(4*nel)
-    ##此处要保证Hn的初始值，不然第二次d循环求解时dg趋向于0，或者在初始化Hn的时候直接进行赋值
-    # # β = zeros(T,4*nel)
-    # # sigma_eq = zeros(T,4*nel)
-    # σ₁, σ₃ = FemBase.principle(σᴮ)
-    # # σc::Array{T,1}=((1.0.-dg2).^2 .+ k) .*(c .+h.*Eᵖ) ./(η/3.0-sqrt(2/3))
-    # # β::Array{T,1} = (1-η) .*σc ./f0p .-(1+η)
-    # function heaviside(x::Float64)
-    #     if x>0
-    #         x=1.0
-    #     elseif x<=0
-    #         x=0.0
-    #     end
-    #     return x
-    # end
-    # εᵉ_plus1 = operator_plus(εᵉ,"plane-strain")
-    # ψᵉ= λ./2.0.*(heaviside.(operator_tr(εᵉ,"plane-strain"))).^2 .+
-    #     G.*(εᵉ_plus1[1,:].^2 .+ εᵉ_plus1[2,:].^2 .+ 0.5*εᵉ_plus1[3,:].^2)
-    # εᵉ_plus1 = operator_plus(εᵉ[:,Mat_ind0],"plane-strain")
-    # ψᵉ[Mat_ind0].= λ[Mat_ind0]./2.0.*(heaviside.(operator_tr(εᵉ[:,Mat_ind0],"plane-strain"))).^2 .+
-    #     G[Mat_ind0].*(εᵉ_plus1[1,:].^2 .+ εᵉ_plus1[2,:].^2 .+ 0.5*εᵉ_plus1[3,:].^2)
-    # #
-    # εᵉ_plus2 = operator_plus(εᵉ[:,Mat_ind12],"plane-strain")
-    # ψᵉ[Mat_ind12] = λ2/2.0*(heaviside.(operator_tr(εᵉ[:,Mat_ind12],"plane-strain"))).^2 .+
-    #     G2*(εᵉ_plus2[1,:].^2 .+ εᵉ_plus2[2,:].^2 .+ 0.5*εᵉ_plus2[3,:].^2)
-    # ψᵉ[Mat_ind12] .= 1e19
-    # #
-    ψᵉ .= Kv0/2.0 .* (heaviside.(operator_tr(εᵉ,planetype))).^2 .- μ0/3.0 .* (operator_tr(εᵉ,planetype)).^2 .+
-        μ0*((εᵉ[1,:]).^2 .+ (εᵉ[2,:]).^2 .+ 0.5.*(εᵉ[3,:]).^2)
-    # ψᵉ[Mat_ind1] = λ1/2.0*(heaviside.(operator_tr(εᵉ[:,Mat_ind1]))).^2 .+
-    #    G1*((operator_dev(εᵉ[:,Mat_ind1])[1,:]).^2 .+ (operator_dev(εᵉ[:,Mat_ind1])[2,:]).^2 .+
-    #    0.5.*operator_dev(εᵉ[:,Mat_ind1])[3,:].^2)
-    # ψᵉ[Mat_ind2] = λ2/2.0*(heaviside.(operator_tr(εᵉ[:,Mat_ind2]))).^2 .+
-    #    G2*((operator_dev(εᵉ[:,Mat_ind2])[1,:]).^2 .+ (operator_dev(εᵉ[:,Mat_ind2])[2,:]).^2 .+
-    #    0.5.*operator_dev(εᵉ[:,Mat_ind2])[3,:].^2)
-    D1::Array{T,1} = max.(0.0, ψᵉ)
-    # D1 = zeros(size(ψᵉ))
-    Hn1::Array{T,2} = max.(reshape(D1,9,nel),Hn1)
+#strain energy decomposition
+    epsilon_dev = operator_dev(epsilon_gauss,"plane-strain")
+    #epsilon_tr = operator_tr(epsilon_gauss,"plane-strain")
+    
+    ψᵉ = μ0.*((epsilon_dev[1,:]).^2 .+ (epsilon_dev[2,:]).^2 .+ 0.5.*(epsilon_dev[3,:]).^2)  #Choo
+   # ψᵉ = 0.5.*Kv0.*(heaviside.(epsilon_tr)).^2 .+ μ0.*((epsilon_dev[1,:]).^2 .+ (epsilon_dev[2,:]).^2 .+ 0.5.*(epsilon_dev[3,:]).^2)  #Amor
+
+#= #hybrid formulation--Rankine
+    σ = SharedArray{Float64,2}(3, 4nel)
+    @sync @distributed for i = 1:4*nel
+        σ[:, i] = Cbulk33 * epsilon_gauss[:, i]
+    end
+    σ = Array(σ)
+    σ1 = principle1(σ,"plane-strain") #求最大主应力
+    ψᵉ = (heaviside.(σ1)).^2 ./(2E0) =#
+#hybrid formulation--modified Mises
+    #  η = 10.0 #10-20 岩石压缩拉伸强度比
+    # ϵeq = epsilon_eq(epsilon_gauss,η)
+    # ψᵉ .= E0.*(ϵeq).^2 /2
+    #应变历史函数
+    H_plus = zeros(Float64,9*nel)
+    H_plus .= ψᵉ  #如果用a=b，则ab的值是联动的。deepcopy不联动
+    H_initial =zeros(Float64,9*nel)
+    ele_1 = [   1,    2,    3,   40,   41,   42,   43,   44,   45,   46,   47,   48,   49,   50,   51,   52,
+    53,   54,   55,   56,   57,   58,   59,   60,   61,   62,   63,   64,   66,   67,   68,   69,
+    70,   71,   72,   73,   74,   75,   76,   77,   79,   80,   81,   82,   83,   84,   85,   86,
+    89,   91,   92,  183,  184,  185,  186,  222,  223,  224,  225,  226,  227,  228,  229,  230,
+   231,  232,  233,  234,  235,  236,  237,  238,  239,  240,  241,  242,  243,  244,  245,  246,
+   247,  248,  249,  250,  251,  252,  253,  254,  255,  256,  257,  258,  259,  260,  261,  262,
+   263,  265,  355,  356,  358, 1505, 2660, 2665, 2853, 2926, 3046, 3503, 3547, 3639, 3684, 3747,
+  3748, 3807, 3853, 4064, 4067, 4112, 4151, 4225, 4229, 4332, 4338, 4340, 5662, 5664, 5667, 5668,
+  5669, 5670, 5671, 5673, 5675, 5676, 5677, 5679, 5680, 5682, 5683, 5684, 5686, 5687, 5689, 5690,
+  5691, 5692, 5693, 5694, 5695, 5697, 5698, 5700, 5701, 5702, 5703, 5705, 5706, 5707, 5708, 5709,
+  5710, 5712, 5714, 5715, 5717, 5718, 5719, 5721, 5722, 5723, 5725, 5726, 5728, 5729, 5730, 5732,
+  5733, 5734, 5735, 5736, 5737, 5739, 5740, 5741, 5743, 5744, 5746, 5747, 5748, 5749, 5751, 5752,
+  5753, 5754, 5755, 5756, 5757, 5759, 5760, 5762, 5763, 5764, 5766, 5768, 5769, 5770, 5771, 5772,
+  5773, 5774, 5775, 5776, 5777, 5778, 5779, 5780, 5781, 5783, 5784, 5785, 5787, 5788, 5790, 5791,
+  5792, 5793, 5794, 5796, 5797, 5798, 5799, 5801, 5802, 5803, 5804, 5805, 5806, 5807, 5808, 5809,
+  5810, 5811, 5812, 5813, 5814, 5815, 5983, 5984, 5992, 5993, 5994, 5995, 5996, 5998, 5999, 6000,
+  6001, 6002, 6003, 6004, 6006, 6007, 6008, 6010, 6011, 6013, 6015, 6017, 6018, 6021, 6024, 6025,
+  6026, 6028, 6029, 6031, 6033, 6034, 6036, 6038, 6040, 6042, 6045, 6046, 6047, 6048, 6049, 6051,
+  6052, 6055, 6056, 6057, 6058, 6061, 6064, 6065, 6067, 6068, 6070, 6071, 6072, 6073, 6074, 6075,
+  6076, 6077, 6078, 6079, 6080, 6082, 6083, 6084, 6085, 6086, 6087, 6088, 6089, 6090, 6092, 6093,
+  6095, 6096, 6097, 6098, 6099, 6101, 6102, 6106, 6107, 6108, 6110, 6111, 6113, 6116, 6117, 6119,
+  6120, 6122, 6123, 6125, 6127, 6128, 6130, 6133, 6134, 6137, 6138, 6141, 6143, 6145, 6146, 6148,
+  6151, 6153, 6154, 6156, 6158, 6159, 6161, 6162, 6164, 6165, 6167, 6169, 6170, 6173, 6175, 6176,
+  6180, 6181, 6182, 6184, 6186, 6188, 6190, 6192, 6194, 6198, 6200, 6202, 6203, 6206, 6207, 6209,
+  6211, 6212, 6213, 6216, 6218, 6219, 6220, 6222, 6225, 6230, 6235, 6236, 6241, 6242, 6244, 6245,
+  6246, 6247, 6248, 6253, 6262, 6266, 6278, 6288, 6290, 6292, 6301, 6328, 6331, 6347, 6350, 6355,
+  6373, 6384, 6391, 6400, 6411, 6414, 6417]  #损伤单元号 Q8和Q4一样
+    ele_2 = union(ele_1*9, ele_1*9 .-1, ele_1*9 .-2, ele_1*9 .-3, ele_1*9 .-4, ele_1*9 .-5, ele_1*9 .-6, ele_1*9 .-7, ele_1*9 .-8)  #gauss点
+    H_initial[ele_2] .= 1e18  
+
+    D1::Array{T,1} = max.(H_initial,H_plus)
+    Hn1::Array{T,2} = max.(reshape(D1,9,nel),Hn1)  #与历史值比较
     return Hn1
 end
-##
+#= 水力压裂
+function Hn1_comp!(Hn1::Array{T,2},epsilon::Array{T,2},p_gauss::Array{T,2}) where T<:Float64
+    ψᵉ = zeros(Float64,4*nel)
+    # ψᵉ .= Kv0/2.0 .* (heaviside.(operator_tr(εᵉ,planetype))).^2 .- μ0/3.0 .* (operator_tr(εᵉ,planetype)).^2 .+
+    #     μ0*((εᵉ[1,:]).^2 .+ (εᵉ[2,:]).^2 .+ 0.5.*(εᵉ[3,:]).^2)
+#   法1
+#    ψᵉ .= Kv0/2.0 .* (operator_tr(epsilon,planetype)).^2 .- μ0/3.0 .* (operator_tr(epsilon,planetype)).^2 .+
+#        μ0*((epsilon[1,:]).^2 .+ (epsilon[2,:]).^2 .+ 0.5.*(epsilon[3,:]).^2)
+    #法2
+    eps_plus = SharedArray{Float64,2}(3,4*nel)#逐个点求epsilon+
+    @sync @distributed for i = 1:4*nel
+        D,V = eigen([epsilon[1,i] epsilon[3,i]/2; epsilon[3,i]/2 epsilon[2,i]]);
+        A = (D[1]+abs(D[1]))/2*V[:,1]*V[:,1]' + (D[2]+abs(D[2]))/2*V[:,2]*V[:,2]';
+        eps_plus[:,i] = [A[1,1]; A[2,2]; 2*A[1,2]];
+    end
+    eps_plus = sdata(eps_plus)
+    ψᵉ .= Kv0/2.0 .* (operator_tr(epsilon,planetype)).^2 .- μ0/3.0 .* (operator_tr(epsilon,planetype)).^2 .+
+        μ0*((eps_plus[1,:]).^2 .+ (eps_plus[2,:]).^2 .+ 0.5.*(eps_plus[3,:]).^2)
+    H_plus = zeros(Float64,4*nel)
+    H_plus = 2*ψᵉ .- p_gauss.^2 .*(  (1/Kf-1/Ks)*(1-φ0) + (Kv0/(Ks^2))   )
+#    H_plus = ψᵉ
+    D1::Array{T,1} = max.(0.0,H_plus)  #正数就是本身，负数就取0
+    Hn1::Array{T,2} = max.(reshape(D1,4,nel),Hn1)  #与历史值比较
+    return Hn1
+end
+=#
+
+#=
 function Hn1_comp!(H0::Array{T},Hn1::Array{T,2},ψᵖ::Array{T},CC::Array{T}) where T<:Float64
     D1::Array{T,1} = max.(0.0, H0 .+ ψᵖ./(hc.(CC).*gc1 .+ (1.0.-hc.(CC)).*gc))
     # D1 = zeros(size(ψᵉ))
@@ -53,3 +92,9 @@ function Hn1_comp!(H0::Array{T},Hn1::Array{T,2},ψᵖ::Array{T},CC::Array{T}) wh
     return Hn1
 end
 #
+function Hn2_comp!(ψᵖ::Array{T,1},Hn2::Array{T,2}) where T<:Float64
+    D1::Array{T,1} = max.(0,ψᵖ)
+    Hn2::Array{T,2} = max.(reshape(D1,4,size(element,1)),Hn2)
+    return  Hn2
+end
+=#

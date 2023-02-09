@@ -1,4 +1,4 @@
-function solvers(u_inc::T) where T<:Float64
+function solversInternal(u_inc::T) where T<:Float64
     uu = zeros(Float64,2*nnode)
     # uu = precpt_u(uu,element,Bu,detjacob,Cbulk33) #弹性步求初始位移
     u_old = deepcopy(uu)  #u_old是上一迭代步值
@@ -10,7 +10,9 @@ function solvers(u_inc::T) where T<:Float64
     d1 = zeros(Float64,ncorner)
     d1_old = deepcopy(d1)
     BreakTime = 0
-
+    
+    d1, Hn1 = d_calcu(uu,Hn1)
+  
     function monoli_initialStiff()
         fid=open("test.dat","w")
         for stp=1:step_total
@@ -26,10 +28,8 @@ function solvers(u_inc::T) where T<:Float64
             while (max(err_d,err_u)>tol) && (nit<maxit)
                 nit+=1
                 @info " Step: $stp   Itr: $nit/$maxit"
-                if stp == 1
-                d1, Hn1 = d_calcu(uu,Hn1)
-                end
-                uu = u_calcu(uu,du,d1,nit)
+
+                uu = u_calcu(uu,du,d1,nit,stp)
                 #err_r = norm(r[freedofs_u])/norm(r_ref[freedofs_u])
                 # (norm(uu.-u_old)<1e-8) ? break : nothing
                 err_d = norm(d1 .- d1_old,Inf)/norm(d1,Inf)
